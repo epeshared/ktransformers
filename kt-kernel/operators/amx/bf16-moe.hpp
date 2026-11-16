@@ -176,6 +176,7 @@ class AMX_BF16_MOE_TP : public AMX_MOE_BASE<T, AMX_BF16_MOE_TP<T>> {
         nth * config_.expert_num, nullptr,
         [this, nth, physical_to_logical_map](int task_id) {
           uint64_t expert_idx = task_id / nth;
+          if (config_.bf16_skip_gpu_expert_weights && config_.should_skip_expert(expert_idx)) return;
           uint64_t logical_expert_id = expert_map(physical_to_logical_map, expert_idx);
           int ith = task_id % nth;
 
@@ -197,6 +198,7 @@ class AMX_BF16_MOE_TP : public AMX_MOE_BASE<T, AMX_BF16_MOE_TP<T>> {
         nth * config_.expert_num, nullptr,
         [this, nth, physical_to_logical_map](int task_id) {
           uint64_t expert_idx = task_id / nth;
+          if (config_.bf16_skip_gpu_expert_weights && config_.should_skip_expert(expert_idx)) return;
           uint64_t logical_expert_id = expert_map(physical_to_logical_map, expert_idx);
           int ith = task_id % nth;
 
@@ -471,6 +473,7 @@ class TP_MOE<AMX_BF16_MOE_TP<K>> : public TP_MOE<AMX_MOE_BASE<K, AMX_BF16_MOE_TP
       pool->get_subpool(i)->do_work_stealing_job(
           tpc.expert_num, nullptr,
           [&](int expert_id_) {
+            if (config.bf16_skip_gpu_expert_weights && config.should_skip_expert(expert_id_)) return;
             const size_t expert_id = expert_map(physical_to_logical_map, expert_id_);
 
             ggml_bf16_t* gate_dst = (ggml_bf16_t*)tpc.gate_proj + expert_id * tp_weight_elems;
@@ -528,6 +531,9 @@ class TP_MOE<AMX_BF16_MOE_TP<K>> : public TP_MOE<AMX_MOE_BASE<K, AMX_BF16_MOE_TP
                                     const std::vector<uintptr_t>& w13_scale_ptrs,
                                     const std::vector<uintptr_t>& w2_weight_ptrs,
                                     const std::vector<uintptr_t>& w2_scale_ptrs) {
+    if (this->config.bf16_skip_gpu_expert_weights) {
+      throw std::runtime_error("Static BF16 placement does not support dynamic weight export");
+    }
     if (this->weights_loaded == false) {
       throw std::runtime_error("Not Loaded");
     }

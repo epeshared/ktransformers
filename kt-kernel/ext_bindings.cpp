@@ -882,6 +882,7 @@ PYBIND11_MODULE(kt_kernel_ext, m) {
       .def_readwrite("pool", &GeneralMOEConfig::pool)
 
       .def_readonly("num_gpu_experts", &GeneralMOEConfig::num_gpu_experts)
+      .def_readwrite("bf16_skip_gpu_expert_weights", &GeneralMOEConfig::bf16_skip_gpu_expert_weights)
       .def_property(
           "gpu_experts_mask",
           [](const GeneralMOEConfig& self) { return reinterpret_cast<uintptr_t>(self.gpu_experts_mask); },
