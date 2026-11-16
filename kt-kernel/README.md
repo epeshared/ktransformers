@@ -807,3 +807,19 @@ It's also recommended to install black for Python code formatting:
 ```shell
 conda install black
 ```
+
+
+### Opt-in static BF16 loading on multi-NUMA CPU sockets
+
+Set `KT_CPUINFER_SOCKET_LOCAL=1` to use one CPU subpool per physical socket.
+The subpool count must equal the number of sockets. Each subpool keeps its
+computation on that socket and uses a strict bind over that socket's NUMA
+nodes, allowing local-first allocation across those nodes rather than a
+machine-wide interleave. Container CPU allowances must include cores from
+every selected socket. Default node-local behavior is unchanged.
+
+Set `KT_CPUINFER_STATIC_BF16=1` with `method="BF16"` to omit CPU packed
+weights for GPU-owned experts. This is a static placement mode: changing the
+mask or mapping, reloading weights, and dynamic weight export are rejected.
+Do not use it for expert migration or dynamic EPLB. The default retains all
+expert weights and its existing behavior. The two controls are independent.

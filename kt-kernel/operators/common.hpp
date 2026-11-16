@@ -240,6 +240,7 @@ struct GeneralMOEConfig {
   // SGLang offload
   int num_gpu_experts = 0;              // Computed from gpu_experts_mask
   uint8_t* gpu_experts_mask = nullptr;  // Bool mask: true = expert on GPU
+  bool bf16_skip_gpu_expert_weights = false;  // Static BF16 placement only.
   void* physical_to_logical_map = nullptr;
 
   // Compute num_gpu_experts from gpu_experts_mask

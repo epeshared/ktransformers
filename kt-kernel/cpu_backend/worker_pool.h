@@ -12,6 +12,7 @@
 
 #include <hwloc.h>
 #include <numa.h>
+#include "socket_policy.h"
 
 #include <atomic>
 #include <barrier>
@@ -26,6 +27,10 @@
 // #define PROFILE_BALANCE
 
 inline void set_to_numa(int this_numa) {
+  if (kt_loading::socket_local()) {
+    kt_loading::bind_socket(this_numa, true);
+    return;
+  }
   struct bitmask* mask = numa_bitmask_alloc(numa_num_configured_nodes());
   numa_bitmask_setbit(mask, this_numa);
   numa_bind(mask);
@@ -33,6 +38,10 @@ inline void set_to_numa(int this_numa) {
 }
 
 inline void set_memory_to_numa(int this_numa) {
+  if (kt_loading::socket_local()) {
+    kt_loading::bind_socket(this_numa, false);
+    return;
+  }
   // printf("Set memory to NUMA %d\n", this_numa);
   hwloc_topology_t topology;
   hwloc_topology_init(&topology);

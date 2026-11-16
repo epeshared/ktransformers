@@ -324,6 +324,8 @@ class _MoEBase:
             CPUInfer singleton instance
         """
         if cls._cpu_infer_instance is None:
+            from .utils.loading import configured_numa_nodes
+            numa_nodes = configured_numa_nodes(threadpool_count, numa_nodes)
             try:
                 if torch.npu.is_available():  # type: ignore[attr-defined]
                     _ensure_ascend_callback_worker()

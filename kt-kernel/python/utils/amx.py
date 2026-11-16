@@ -777,6 +777,17 @@ class NativeMoEWrapper(BaseMoEWrapper):
 
     def load_weights(self, physical_to_logical_map_cpu: torch.Tensor):
         import time
+        import os
+        self._static_bf16 = os.environ.get("KT_CPUINFER_STATIC_BF16") == "1"
+        if self._static_bf16:
+            if self.method != "BF16" or not _HAS_BF16_SUPPORT:
+                raise ValueError("Static BF16 placement requires the AMX BF16 backend")
+            if getattr(self, "_static_gpu_mask", None) is not None:
+                raise ValueError("Static BF16 placement cannot reload or change expert mappings")
+            self._static_gpu_mask = self.gpu_experts_mask.clone()
+            self._static_mapping = physical_to_logical_map_cpu.clone()
+            self._static_mapping_source = physical_to_logical_map_cpu
+
 
         loader = self.loader
         if loader is None:
@@ -878,6 +889,7 @@ class NativeMoEWrapper(BaseMoEWrapper):
             self.moe_intermediate_size,
             self.gpu_experts_mask.data_ptr(),
         )
+        moe_config.bf16_skip_gpu_expert_weights = self._static_bf16
         moe_config.layer_idx = self.layer_idx
         moe_config.pool = self.cpu_infer.backend_
         moe_config.max_len = self.chunked_prefill_size
@@ -1063,6 +1075,14 @@ class NativeMoEWrapper(BaseMoEWrapper):
             f"total: {(t6-t0)*1000:.1f}ms"
         )
 
+    def submit_forward(self, hidden_states, topk_ids, topk_weights, cuda_stream):
+        if getattr(self, "_static_bf16", False):
+            if not torch.equal(self.gpu_experts_mask, self._static_gpu_mask):
+                raise ValueError("Static BF16 placement cannot change the GPU expert mask")
+            if not torch.equal(self._static_mapping_source, self._static_mapping):
+                raise ValueError("Static BF16 placement cannot change expert mappings")
+        return super().submit_forward(hidden_states, topk_ids, topk_weights, cuda_stream)
+
     def submit_write_weight_scale_to_buffer(
         self,
         gpu_tp_count: int,
@@ -1079,6 +1099,8 @@ class NativeMoEWrapper(BaseMoEWrapper):
         shared CPUInfer queue. The pointer lists should be plain integer lists (e.g. from
         tensor.data_ptr()).
         """
+        if getattr(self, "_static_bf16", False):
+            raise ValueError("Static BF16 placement does not support dynamic weight export")
         if self.moe is None:
             raise RuntimeError("MoE instance not initialized; cannot submit write_weight_scale_to_buffer task.")
 
