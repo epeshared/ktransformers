@@ -780,8 +780,8 @@ class NativeMoEWrapper(BaseMoEWrapper):
         import os
         self._static_bf16 = os.environ.get("KT_CPUINFER_STATIC_BF16") == "1"
         if self._static_bf16:
-            if self.method != "BF16":
-                raise ValueError("Static BF16 placement requires method='BF16'")
+            if self.method != "BF16" or not _HAS_BF16_SUPPORT:
+                raise ValueError("Static BF16 placement requires the AMX BF16 backend")
             if getattr(self, "_static_gpu_mask", None) is not None:
                 raise ValueError("Static BF16 placement cannot reload or change expert mappings")
             self._static_gpu_mask = self.gpu_experts_mask.clone()
