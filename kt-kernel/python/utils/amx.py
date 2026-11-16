@@ -1075,13 +1075,13 @@ class NativeMoEWrapper(BaseMoEWrapper):
             f"total: {(t6-t0)*1000:.1f}ms"
         )
 
-    def submit_forward(self, hidden_states, expert_ids, expert_weights, cuda_stream):
+    def submit_forward(self, hidden_states, topk_ids, topk_weights, cuda_stream):
         if getattr(self, "_static_bf16", False):
             if not torch.equal(self.gpu_experts_mask, self._static_gpu_mask):
                 raise ValueError("Static BF16 placement cannot change the GPU expert mask")
             if not torch.equal(self._static_mapping_source, self._static_mapping):
                 raise ValueError("Static BF16 placement cannot change expert mappings")
-        return super().submit_forward(hidden_states, expert_ids, expert_weights, cuda_stream)
+        return super().submit_forward(hidden_states, topk_ids, topk_weights, cuda_stream)
 
     def submit_write_weight_scale_to_buffer(
         self,
