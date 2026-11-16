@@ -17,10 +17,9 @@ from types import SimpleNamespace
 KT_KERNEL_ROOT = Path(__file__).resolve().parents[1]
 EXPERTS_PATH = KT_KERNEL_ROOT / "python/experts.py"
 AMX_PATH = KT_KERNEL_ROOT / "python/utils/amx.py"
-ALLOWED_METHODS = ("FP8", "MXFP4", "MXFP8")
+ALLOWED_METHODS = ("BF16", "FP8", "MXFP4", "MXFP8")
 REJECTED_METHODS = (
     "RAWINT4",
-    "BF16",
     "FP8_PERCHANNEL",
     "GPTQ_INT4",
     "SYCL_GPTQ_INT4",
@@ -138,6 +137,11 @@ class TestSwigluLimitMethodGuards(unittest.TestCase):
         self.assertEqual(wrapper.kwargs["method"], "FP8")
         self.assertEqual(wrapper.kwargs["swiglu_limit"], 10.0)
         self.assertEqual(wrapper.kwargs["swiglu_alpha"], 0.0)
+
+    def test_factory_forwards_limit_to_bf16(self):
+        wrapper = _compile_factory()(**_factory_kwargs("BF16", 10.0))
+        self.assertEqual(wrapper.kwargs["method"], "BF16")
+        self.assertEqual(wrapper.kwargs["swiglu_limit"], 10.0)
 
     def test_factory_does_not_widen_other_native_formats(self):
         factory = _compile_factory()
